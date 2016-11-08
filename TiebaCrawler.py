@@ -1,30 +1,26 @@
 #!/usr/bin/python
 #_*_encoding=utf8_*_
-#Python3.5
+#Python 3.5.2
 
-import sys
+# 使用方法
+# python launcher.py --ID 4842388571 --TieziKind 0 --Date 2016-11-12 --Time 00:00 --SortedTop 0 --SortedMethod 0 --OnlySender 0 --OnlyPicsUser 0 --DownloadPics 0
+import sys, getopt
 import urllib.request
 import os
 import re
 import logging
 import datetime
+import argparse
 
-# 可以更改的变量
-# 4842388571 国砖吧凯音爆照 | 4836451867 Dune | 4799318725 Fiio |
-isDUNE = 0                # 达音科吧有点不同，设为1才能截取；正常情况设为0
+# 可以更改的变量(早期测试使用，现已使用命令行参数传递)
+TieziKind = 0             # 达音科吧有点不同，设为1才能截取；正常情况设为0
 TieziID = 4842388571      # 帖子 ID 号
-
-# Deadline 截止期，例如下面被注释的一行。截止期之后的帖子不在统计。
-# Deadline = '' 表示没有设置统计截止期
 Deadline = '2016-11-12 00:00'
-#Deadline = ''
-
 Flag_SortedTop = 0       # 打印发图总数排行前 N 个用户，0 不打印 !!!不可大于总参与用户数量，如果报错，请改小
 Flag_SortedMethod = 0     # 按照下方说明修改
 # 0. 发图数量 -> 首次回贴时间
 # 1. 发图数量 -> 贴吧等级
 # 2. 贴吧等级 -> 发图数量
-#
 Flag_OnlySender = 0       # 1 只看楼主；0 所有楼层
 Flag_OnlyPicsUser = 0     # 1 只保存有图片的楼层；0 保存所有回复楼层
 Flag_DownloadPics = 0     # 1 下载图片；0 不下载图片
@@ -33,12 +29,52 @@ Flag_DownloadPics = 0     # 1 下载图片；0 不下载图片
 # 以下全局变量仅供自己使用
 Flag_GetRegexResult = False
 NewPath = ""
-pList = None
+tiezi = None
 
 # Debug 输出
 logging.basicConfig(format = '%(message)s',level = logging.INFO)
 
-class postLIST:
+def setArgparse():
+    global TieziKind
+    global TieziID
+    global Deadline
+    global Flag_SortedTop
+    global Flag_SortedMethod
+    global Flag_OnlySender
+    global Flag_OnlyPicsUser
+    global Flag_DownloadPics
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ID", help="帖子ID号，网页地址内有")
+    parser.add_argument("--TieziKind", help="达音科吧用1，其它用0", type = int)
+    parser.add_argument("--Date", help="只抓取该时间以前的帖子")
+    parser.add_argument("--Time", help="只抓取该时间以前的帖子")
+    parser.add_argument("--SortedTop", help="0不排序，或者对前N名进行排序", type = int)
+    parser.add_argument("--SortedMethod", help="0 发图数量 -> 首次回贴时间\n1 发图数量 -> 贴吧等级\n2 贴吧等级 -> 发图数量", type = int)
+    parser.add_argument("--OnlySender", help="1 只看楼主；2 全部帖子", type = int)
+    parser.add_argument("--OnlyPicsUser", help="1 只保存有图片的楼层；0 保存所有回复楼层", type = int)
+    parser.add_argument("--DownloadPics", help="1 下载图片；0 不下载图片", type = int)
+    args = parser.parse_args()
+    TieziKind = args.TieziKind
+    TieziID = args.ID
+    Deadline = args.Date + ' ' + args.Time
+    Flag_SortedTop = args.SortedTop
+    Flag_SortedMethod = args.SortedMethod
+    Flag_OnlySender = args.OnlySender
+    Flag_OnlyPicsUser = args.OnlyPicsUser
+    Flag_DownloadPics = args.DownloadPics
+    logging.debug(TieziKind)
+    logging.debug(TieziID)
+    logging.debug(Deadline)
+    logging.debug(Flag_SortedTop)
+    logging.debug(Flag_SortedMethod)
+    logging.debug(Flag_OnlySender)
+    logging.debug(Flag_OnlyPicsUser)
+    logging.debug(Flag_DownloadPics)
+    # pdb.set_trace()
+    logging.debug(args)
+    return
+
+class PostTiezi:
     def __init__(self):
         self.idList = []
         self.contentList = []
@@ -112,11 +148,11 @@ class BDTB:
 
     #获取信息
     def decodePageContent(self,pagecontent,page):
-        global isDUNE
-        if isDUNE == 0:
+        global TieziKind
+        if TieziKind == 0:
             #获取信息:性别，等级，发帖时间，楼层，ID，发帖内容
             pattern = re.compile(r'<div class="l_post j_l_post l_post_bright.*?user_name&quot;:&quot;.*?&quot.*?user_sex&quot;:(.*?),.*?level_id&quot;:(.*?),.*?date&quot;:&quot;(.*?)&quot.*?post_no&quot;:(.*?),.*?<li class="icon">.*?<div class="icon_relative j_user_card".*?<img username="(.*?)".*?clearfix">            (.*?)</div>', re.DOTALL | re.IGNORECASE | re.MULTILINE)
-        elif isDUNE == 1:
+        elif TieziKind == 1:
             #获取信息:楼层，ID，等级，发帖内容，发帖时间
             pattern = re.compile(r'post_no.*?:(.*?),.*?<img username="(.*?)".*?<div class="d_badge_lv">(.*?)</div>.*?class=".*?j_d_post_content.*?">            (.*?)</div>.*?(\d{4}-\d{1,2}-\d{1,2} \d{1,2}:\d{1,2})', re.DOTALL | re.IGNORECASE | re.MULTILINE)
 
@@ -163,11 +199,9 @@ class BDTB:
         see_lz = Flag_OnlySender
         sss = self.baseUrl+str(urlid)+self.seellz+str(see_lz)+self.urlpn+str(1)
 #         sss = 'http://tieba.baidu.com/p/3138733512?see_lz=0&pn=1'
-        logging.info('url = %s' % sss)
         pagecontent = self.getPageContent(sss)
 
         num = self.decodePageContentNum(pagecontent)
-        logging.info('%s回复贴，共%s页' % (num.group(1),num.group(2)))
 
         self.pagenum = num.group(2)  #保存页码数量
         self.title = self.decodeTieziTitle(pagecontent)
@@ -177,13 +211,14 @@ class BDTB:
 #        logging.info('titleName is %s' % titleName)
         titleName = titleName.translate(None, b'*|\/<>:"?')
         titleName = titleName.decode('UTF-8')
-#        logging.info('titleName is %s' % titleName)
+        logging.info('开始抓取:%s' % titleName)
+        logging.info('%s回复贴，共%s页' % (num.group(1),num.group(2)))
 
         global NewPath
         global Flag_DownloadPics
         global Flag_OnlyPicsUser
-        global pList
-        global isDUNE
+        global tiezi
+        global TieziKind
         global Deadline
 
         if Deadline != '':
@@ -194,9 +229,9 @@ class BDTB:
         if not os.path.exists(NewPath):
             os.makedirs(NewPath)
 
-        pList.postSum = num.group(1)
-        pList.pageSum = num.group(2)
-        pList.title = titleName
+        tiezi.postSum = num.group(1)
+        tiezi.pageSum = num.group(2)
+        tiezi.title = titleName
 
         deleteBR = re.compile(r'<br>', re.DOTALL | re.IGNORECASE | re.MULTILINE)
         deleteIMG = re.compile(r'<img.*?>(<br>){0,}', re.DOTALL | re.IGNORECASE | re.MULTILINE)
@@ -211,10 +246,10 @@ class BDTB:
 
 #           ----------------------------------------\n\n楼层：\t\5\nＩＤ：\t\6\n等级：\t\3\n性别：\t\2\n发帖时间：\4\n\n内容：\n\7\n
             for con in content:
-                if isDUNE == 0:
+                if TieziKind == 0:
                     #获取信息:性别，等级，发帖时间，楼层，ID，发帖内容
                     tmpList = list(con)
-                elif isDUNE == 1:
+                elif TieziKind == 1:
                     #获取信息:楼层，ID，等级，发帖内容，发帖时间
                     tmpList = []
                     tmpList.append(r'0')
@@ -241,7 +276,7 @@ class BDTB:
                     tmpList[5] = text
                 tmpList.append(pics)
 #                logging.debug(tmpList)
-                pList.add(tmpList)
+                tiezi.add(tmpList)
                 cnt = int(1)
                 if Flag_DownloadPics == 1:    # 下载图片
                     for l in pics:
@@ -253,7 +288,7 @@ def saveFile(listPrint):
     global NewPath
     global Flag_OnlySender
     global Flag_OnlyPicsUser
-    global pList
+    global tiezi
     global Deadline
 
     if Flag_OnlySender==1:
@@ -261,8 +296,8 @@ def saveFile(listPrint):
     else:
         f = open(NewPath + '/[帖子内容-全部].txt','w',encoding='utf-8')
 
-    f.write('# %s\n\n' % pList.title)
-    f.write('%s回复贴，共%s页\n统计结果于本文末尾\n' % (pList.postSum, pList.pageSum))
+    f.write('# %s\n\n' % tiezi.title)
+    f.write('%s回复贴，共%s页\n统计结果于本文末尾\n' % (tiezi.postSum, tiezi.pageSum))
     if Flag_OnlyPicsUser == 1:
         f.write('PS：**本文只打印有照片的楼层**\n\n')
     else:
@@ -359,12 +394,14 @@ def saveFile(listPrint):
         f.close()
 
 def main():
-    global pList
-    pList = postLIST()
+    global tiezi
+    setArgparse()
+    tiezi = PostTiezi()
     bdtb = BDTB()
     bdtb.start()
-    saveFile(pList.contentList)
-    logging.info('\n--Done--')
+    saveFile(tiezi.contentList)
+    logging.info('\n--%s 完成--' % tiezi.title)
+    exit()
 
 if __name__ == '__main__':
     main()
