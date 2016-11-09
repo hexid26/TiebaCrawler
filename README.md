@@ -3,7 +3,7 @@
 Use Tieba post ID to get post information
 
 * 本代码基于 Python 3.5.2 编写
-* 最新脚本 Windows 下测试通过，MacOS未测试
+* 最新脚本 Windows 下测试通过，MacOS 基于 python3 测试通过
 
 ## 简要说明
 
@@ -51,9 +51,18 @@ python TiebaCrawler.py --ID 4842388571 --TieziKind 0 --Date 2016-11-12 --Time 00
 ```
 
 ---
+### 2016/11/09 更新
+
+MacOS + Python3 测试通过  
+CodeRunner 和 Sublime 均调试通过
+
+1. `launcher.py` 加入系统类型判断
+2. 选择合适的 python 命令行
+
+---
 ### 2016/11/08 更新
 
-Windows 下测试通过，MacOS未测试
+Windows 下测试通过，MacOS 未测试
 
 1. 加入launcher
 2. TiebaCrawler.py 改造为命令行传输参数
