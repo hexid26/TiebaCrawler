@@ -26,20 +26,36 @@ logging.basicConfig(format = '%(message)s',level = logging.INFO)
 # 8: 1 只保存有图片的楼层；0 保存所有回复楼层
 # 9: 1 下载图片；0 不下载图片
 TieziList = [
-            ['4842388571', '0', '2016-11-12', '00:00', '20', '0', '0', '0', '1'], # 国砖吧cayin爆照贴
+            ['4842388571', '0', '2016-11-12', '00:00', '20', '0', '0', '0', '0'], # 国砖吧cayin爆照贴
 ]
 
+pythonInSystem = ''
+
+def checkPlatform():
+    global pythonInSystem
+    import platform
+    sys = platform.system()
+    if sys == 'Darwin':
+        pythonInSystem = 'python3'
+        sys = 'MacOS'
+    if sys == 'Linux':
+        pythonInSystem = 'python3'
+    elif sys == 'Windows':
+        pythonInSystem = 'python'
+    logging.info('System is: %s.\nPython command use: %s\n' % (sys,pythonInSystem))
 
 def main():
     processPoll = []
+    global pythonInSystem
+    checkPlatform()
     for item in TieziList:
-        processPoll.append(subprocess.Popen('python TiebaCrawler.py --ID %s --TieziKind %s --Date %s --Time %s --SortedTop %s --SortedMethod %s --OnlySender %s --OnlyPicsUser %s --DownloadPics %s' % (item[0],item[1],item[2],item[3],item[4],item[5],item[6],item[7],item[8])))
+        processPoll.append(subprocess.Popen('%s TiebaCrawler.py --ID %s --TieziKind %s --Date %s --Time %s --SortedTop %s --SortedMethod %s --OnlySender %s --OnlyPicsUser %s --DownloadPics %s' % (pythonInSystem, item[0],item[1],item[2],item[3],item[4],item[5],item[6],item[7],item[8]), shell = True))
     while len(processPoll) != 0:
         logging.debug('工作进程数量:%d' % len(processPoll))
         for item in processPoll:
             if item.poll() is not None:
                 processPoll.remove(item)
-        time.sleep(1)
+        time.sleep(0.5)
     logging.info('==========\n!!!所有统计任务完成!!!\n')
     exit(1)
 
