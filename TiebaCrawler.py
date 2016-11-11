@@ -253,13 +253,14 @@ class BDTB:
                         cnt += 1
 
 def saveFile(listPrint):
+    global TieziID    # 打印用
     global NewPath
     global Flag_OnlySender
     global tiezi
     global Deadline
     Flag_OnlyPicsUser = 0
     fileSaveWithPics = ['无图','有图']
-    fileSortMethodName = ['图数_回复时间','图数_贴吧等级','贴吧等级_图数']
+    fileSortMethodName = ['图数_回复时间','图数_等级','等级_图数','回复数_等级']
     for Flag_OnlyPicsUser in range(0, len(fileSaveWithPics)):
         # 统计发图的用户数量
         staticJoinSum = 0
@@ -271,7 +272,7 @@ def saveFile(listPrint):
         else:
             f = open(NewPath + '/[帖子内容-全部%s].txt' % fileSaveWithPics[Flag_OnlyPicsUser],'w',encoding='utf-8')
 
-        f.write('# %s\n\n' % tiezi.title)
+        f.write('# 原帖地址\nhttp://tieba.baidu.com/p/%s\n\n# %s\n\n' % (TieziID, tiezi.title))
         f.write('%s回复贴，共%s页\n统计结果于本文末尾\n' % (tiezi.postSum, tiezi.pageSum))
         if Flag_OnlyPicsUser == 1:
             f.write('PS：**本文只打印有照片的楼层**\n\n')
@@ -293,7 +294,8 @@ def saveFile(listPrint):
                 for l in tmp[5]:
                     f.write('![](%s)\n' % l)
             f.write('\n')
-
+        f.write('# 原帖地址\nhttp://tieba.baidu.com/p/%s\n\n# %s\n\n' % (TieziID, tiezi.title))
+        f.write('%s回复贴，共%s页\n\n' % (tiezi.postSum, tiezi.pageSum))
         # 写入统计信息
         f.write('========================================\n# 统计结果\n\n')
         f.write('### 发帖参与人数：%d\n' % len(listPrint))
@@ -313,20 +315,23 @@ def saveFile(listPrint):
         Flag_OnlyPicsUser += 1
     # 全局结果保存完毕
     # 保存所有排序结果
-    Flag_SortedMethod = 0
-    for Flag_SortedMethod in range(0,3):
-        f = open(NewPath + '/[统计结果-%s].txt' % fileSortMethodName[Flag_SortedMethod],'w',encoding='utf-8')
-        if Flag_SortedMethod == 0:
+    fileSortMethodIndex = 0
+    for fileSortMethodIndex in range(0,len(fileSortMethodName)):
+        f = open(NewPath + '/[统计结果-%s].txt' % fileSortMethodName[fileSortMethodIndex],'w',encoding='utf-8')
+        if fileSortMethodIndex == 0:
             listPrint.sort(key=lambda x:x[7], reverse=True)
             f.write('排名先遵循发图总数，再依据第一次回复时间\n\n')
         # 1. 发图数量 -> 贴吧等级
-        elif Flag_SortedMethod == 1:
+        elif fileSortMethodIndex == 1:
             listPrint.sort(key=lambda x:(x[7],x[2]), reverse=True)
             f.write('排名先遵循发图总数，再依据贴吧等级\n\n')
         # 3. 贴吧等级 -> 发图数量
-        elif Flag_SortedMethod == 2:
+        elif fileSortMethodIndex == 2:
             listPrint.sort(key=lambda x:(x[2],x[7]), reverse=True)
             f.write('排名先遵循贴吧等级，再依据发图数量\n\n')
+        elif fileSortMethodIndex == 3:
+            listPrint.sort(key=lambda x:(x[6],x[2]), reverse=True)
+            f.write('排名先遵循回复数量，再依据贴吧等级\n\n')
         f.write('========================================\n# 排序结果\n\n')
         f.write('### 发帖参与人数：%d\n' % len(listPrint))
         f.write('### 爆照参与人数：%d（楼主若发图，也算在里面。根据实际情况减除。）\n' % staticJoinSum)
@@ -346,7 +351,7 @@ def saveFile(listPrint):
 def saveSort(SortedTop):
     global tiezi
     listPrint = tiezi.contentList
-    sortMethod = ['发图总数-第一次回复时间','发图总数-贴吧等级','贴吧等级-发图数量']
+    sortMethod = ['发图总数-第一次回复时间','发图总数-贴吧等级','贴吧等级-发图数量','回复数量-贴吧等级']
     # 如果用户数不够，修改SortedTopN
     if SortedTop > len(tiezi.contentList):
         SortedTop = len(tiezi.contentList)
@@ -357,10 +362,11 @@ def saveSort(SortedTop):
     else:
         f.write('# 统计截止日期：%s\n' % Deadline)
     # 写入 TOC
-    f.write('\n# 索引\n\n  * [发图总数，第一次回复时间](#%s)\n  * [发图总数，贴吧等级](#%s)\n  * [贴吧等级，发图数量](#%s)\n\n========================================\n' % (sortMethod[0], sortMethod[1], sortMethod[2]))
+    f.write('\n# 索引\n\n  * [发图总数，第一次回复时间](#%s)\n  * [发图总数，贴吧等级](#%s)\n  * [贴吧等级，发图数量](#%s)\n  * [回复数量，贴吧等级](#%s)\n\n========================================\n' % (sortMethod[0], sortMethod[1], sortMethod[2], sortMethod[3]))
     # 排序处理
     sortMethodIndex = 0
-    for sortMethodIndex in range(0, 3):
+    for sortMethodIndex in range(0, len(sortMethod)):
+        # 0 ID 1 性别 2 等级 3 楼层 4 帖子内容 5 图片内容 6 楼层数 7 图片数量
         # 0. 发图数量 -> 首次回贴时间
         if sortMethodIndex == 0:
             listPrint.sort(key=lambda x:x[7], reverse=True)
@@ -370,6 +376,8 @@ def saveSort(SortedTop):
         # 2. 贴吧等级 -> 发图数量
         elif sortMethodIndex == 2:
             listPrint.sort(key=lambda x:(x[2],x[7]), reverse=True)
+        elif sortMethodIndex == 3:
+            listPrint.sort(key=lambda x:(x[6],x[2]), reverse=True)
         f.write('\n# [%s](#索引)\n\n' % sortMethod[sortMethodIndex])
         # 输出所有用户的表格
         for cnt in range(0, SortedTop):
