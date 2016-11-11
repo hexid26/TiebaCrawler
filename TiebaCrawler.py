@@ -333,7 +333,7 @@ def saveFile(listPrint):
     # 写入统计信息
     f.write('========================================\n# 统计结果\n\n')
     f.write('### 回复参与人数：%d\n' % staticUserSum)
-    f.write('### 爆照参与人数：%d\n' % staticJoinSum)
+    f.write('### 爆照参与人数：%d（楼主若发图，也算在里面。根据实际情况减除。）\n' % staticJoinSum)
     f.write('### 收获照片总数：%d\n' % staticPicSum)
     if Deadline == '':
         f.write('### 统计截止日期：%s\n' % datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
