@@ -1,15 +1,14 @@
-#!/usr/bin/python
-#_*_encoding=utf8_*_
-#Python 3.5.2
+#!/usr/bin/env python3
+# encoding=utf8
+"""贴吧爬虫的启动脚本，用来批量启动爬虫"""
 
-import sys, getopt
 import logging
 import subprocess
 import time
 
 # Debug 输出
-logging.basicConfig(format = '%(message)s',level = logging.INFO)
 
+logging.basicConfig(format='%(message)s', level=logging.INFO)
 """
 在此处添加任务
 意义为
@@ -23,41 +22,56 @@ logging.basicConfig(format = '%(message)s',level = logging.INFO)
 7: 1 下载图片；0 不下载图片
 """
 
-TieziList = [
-            # ['4842388571', '0', '2016-11-12', '00:00', '10', '0', '0'], # 国砖吧cayin爆照贴
-            # ['4849853857', '0', '2016-11-12', '00:00', '0', '0', '0'], # 耳机吧HiFiMan抽奖贴
-            ['4867759631', '0', '2016-11-25', '00:00', '0', '0', '0'], # 达音科双11第二轮活动贴
+TIEZI_LIST = [
+    # 国砖吧cayin爆照贴
+    ['4842388571', '0', '2016-11-12', '00:00', '10', '0', '0'],
+    # 耳机吧HiFiMan抽奖贴
+    # ['4849853857', '0', '2016-11-12', '00:00', '0', '0', '0'],
+    # 达音科双11第二轮活动贴
+    # ['4867759631', '0', '2016-11-25', '00:00', '0', '0', '0'],
 ]
 
-pythonInSystem = ''
+PYTHON_IN_SYSTEM = ''
 
-def checkPlatform():
-    global pythonInSystem
+
+def check_platform():
+    """检查当前运行平台（环境）"""
+    global PYTHON_IN_SYSTEM
     import platform
     sys = platform.system()
     if sys == 'Darwin':
-        pythonInSystem = 'python3'
+        PYTHON_IN_SYSTEM = 'python'
         sys = 'MacOS'
     if sys == 'Linux':
-        pythonInSystem = 'python3'
+        PYTHON_IN_SYSTEM = 'python'
     elif sys == 'Windows':
-        pythonInSystem = 'python'
-    logging.info('System is: %s.\nPython command use: %s\n' % (sys,pythonInSystem))
+        PYTHON_IN_SYSTEM = 'python'
+    logging.info('System is: %s.\nPython command use: %s\n', sys,
+                 PYTHON_IN_SYSTEM)
+
 
 def main():
-    processPoll = []
-    global pythonInSystem
-    checkPlatform()
-    for item in TieziList:
-        processPoll.append(subprocess.Popen('%s TiebaCrawler.py --ID %s --TieziKind %s --Date %s --Time %s --SortedTop %s --OnlySender %s --DownloadPics %s' % (pythonInSystem, item[0],item[1],item[2],item[3],item[4],item[5],item[6]), shell = True))
-    while len(processPoll) != 0:
-        logging.debug('工作进程数量:%d' % len(processPoll))
-        for item in processPoll:
+    """主函数"""
+    process_poll = []
+    global PYTHON_IN_SYSTEM
+    check_platform()
+    for item in TIEZI_LIST:
+        process_poll.append(
+            subprocess.Popen(
+                '%s TiebaCrawler.py --ID %s --TieziKind %s --Date %s --Time \
+                %s --SortedTop %s --OnlySender %s --DownloadPics %s' %
+                (PYTHON_IN_SYSTEM, item[0], item[1], item[2], item[3], item[4],
+                 item[5], item[6]),
+                shell=True))
+    while len(process_poll) != 0:
+        logging.debug('工作进程数量:%d', len(process_poll))
+        for item in process_poll:
             if item.poll() is not None:
-                processPoll.remove(item)
+                process_poll.remove(item)
         time.sleep(0.5)
     logging.info('==========\n!!!所有统计任务完成!!!\n')
     exit(0)
+
 
 if __name__ == '__main__':
     main()
